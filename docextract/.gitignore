@@ -1,0 +1,28 @@
+# Build and Dependency Directories
+node_modules/
+dist/
+build/
+.next/
+.venv/
+venv/
+__pycache__/
+
+# Environment and Credentials
+.env
+.env.local
+*.pem
+*.key
+
+# Temporary Files and Logs
+backend/tmp/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker Files (Personal config if any)
+.docker/
+
+# OS Related
+.DS_Store
+Thumbs.db

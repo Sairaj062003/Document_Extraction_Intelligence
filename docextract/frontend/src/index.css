@@ -444,10 +444,11 @@ code, pre {
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
 }
 
+@media (min-width: 1600px) { .results-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 1100px) { .results-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px)  { .results-grid { grid-template-columns: 1fr; } }
 
@@ -466,6 +467,8 @@ code, pre {
 .result-card:nth-child(1) { animation-delay: 0.05s; }
 .result-card:nth-child(2) { animation-delay: 0.12s; }
 .result-card:nth-child(3) { animation-delay: 0.19s; }
+.result-card:nth-child(4) { animation-delay: 0.26s; }
+.result-card:nth-child(5) { animation-delay: 0.33s; }
 
 @keyframes card-in {
   from { opacity: 0; transform: translateY(16px); }
@@ -503,6 +506,8 @@ code, pre {
 .model-icon.paddle  { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); }
 .model-icon.llama   { background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.25);  }
 .model-icon.gemini  { background: rgba(99,102,241,0.12);  border: 1px solid rgba(99,102,241,0.25);  }
+.model-icon.pymupdf { background: rgba(20,184,166,0.12);  border: 1px solid rgba(20,184,166,0.25);  }
+.model-icon.mineru  { background: rgba(168,85,247,0.12);  border: 1px solid rgba(168,85,247,0.25);  }
 
 .model-name { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
 .model-sub  { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }

@@ -15,7 +15,7 @@ export default function App() {
             <div className="logo-icon">⚡</div>
             <span className="logo-text">DocExtract</span>
           </div>
-          <span className="header-badge">3 Extractors · Parallel</span>
+          <span className="header-badge">5 Extractors · Parallel</span>
         </div>
       </header>
 
@@ -29,11 +29,11 @@ export default function App() {
               <span>✦</span> AI-Powered Document Extraction
             </div>
             <h1 className="hero-title">
-              Extract text with <span>three AI models</span> simultaneously
+              Extract text with <span>five AI models</span> simultaneously
             </h1>
             <p className="hero-sub">
               Upload any document and get parallel results from PaddleOCR,
-              LlamaParse, and Gemini Vision — side by side, in seconds.
+              LlamaParse, Gemini Vision, PyMuPDF4LLM, and MinerU+Qwen — side by side, in seconds.
             </p>
           </section>
 

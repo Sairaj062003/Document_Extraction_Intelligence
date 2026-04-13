@@ -19,6 +19,18 @@ const MODEL_META = {
     icon: '✨',
     iconClass: 'gemini',
   },
+  pymupdf4llm: {
+    label: 'PyMuPDF4LLM',
+    sub: 'Hybrid OCR · Layout-aware',
+    icon: '📄',
+    iconClass: 'pymupdf',
+  },
+  mineru_qwen: {
+    label: 'MinerU + Qwen',
+    sub: 'Local · Offline · AI-refined',
+    icon: '🧠',
+    iconClass: 'mineru',
+  },
 };
 
 function CopyButton({ text }) {
@@ -149,7 +161,7 @@ function ResultCard({ modelKey, data }) {
 export default function ResultsPanel({ results, loading }) {
   if (!results && !loading) return null;
 
-  const modelKeys = ['paddleocr', 'llamaparse', 'gemini'];
+  const modelKeys = ['paddleocr', 'llamaparse', 'gemini', 'pymupdf4llm', 'mineru_qwen'];
 
   return (
     <div className="results-section fade-in">

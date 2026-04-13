@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/tmp:/app/tmp
+    env_file:
+      - ./backend/.env
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # build_arg: # Uncomment and set if you want to fix the API URL at build time
+      #   VITE_API_URL: "http://YOUR_VM_IP:8000/extract"
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  tmp_data:

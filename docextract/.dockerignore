@@ -1,0 +1,24 @@
+# Local dependencies
+node_modules
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist
+build
+.next
+
+# Project specific
+backend/tmp/*
+!backend/tmp/.gitkeep
+.env
+.git
+.gitignore
+*.md
+docker-compose.yml
+Dockerfile
+.dockerignore

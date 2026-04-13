@@ -10,3 +10,6 @@ llama-parse
 google-genai
 python-docx
 numpy==1.26.4
+pymupdf4llm
+magic-pdf[full]
+ollama

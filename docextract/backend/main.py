@@ -12,10 +12,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from extractors import paddle_ocr, llama_parse, gemini_vision  # noqa: E402
+from extractors import pymupdf4llm_extractor, mineru_qwen_extractor  # noqa: E402
 
 app = FastAPI(
     title="DocExtract API",
-    description="Extract text from documents using PaddleOCR, LlamaParse, and Gemini Vision in parallel",
+    description="Extract text from documents using PaddleOCR, LlamaParse, Gemini Vision, PyMuPDF4LLM, and MinerU+Qwen in parallel",
     version="1.0.0",
 )
 
@@ -41,7 +42,7 @@ async def health():
 @app.post("/extract")
 async def extract(file: UploadFile = File(...)):
     """
-    Upload a document and extract text using all three extractors in parallel.
+    Upload a document and extract text using all five extractors in parallel.
     Supported formats: PDF, PNG, JPG, JPEG, TIFF, DOCX, TXT
     """
     ext = Path(file.filename).suffix.lower()
@@ -56,11 +57,13 @@ async def extract(file: UploadFile = File(...)):
 
     path_str = str(save_path)
 
-    # Run all three extractors in parallel with a 60-second timeout
+    # Run all five extractors in parallel with per-extractor timeouts
     results = await asyncio.gather(
         asyncio.wait_for(paddle_ocr.extract(path_str), timeout=60),
         asyncio.wait_for(llama_parse.extract(path_str), timeout=60),
         asyncio.wait_for(gemini_vision.extract(path_str), timeout=60),
+        asyncio.wait_for(pymupdf4llm_extractor.extract(path_str), timeout=90),
+        asyncio.wait_for(mineru_qwen_extractor.extract(path_str), timeout=180),
         return_exceptions=True,
     )
 
@@ -81,5 +84,7 @@ async def extract(file: UploadFile = File(...)):
             "paddleocr": safe(results[0], "paddleocr"),
             "llamaparse": safe(results[1], "llamaparse"),
             "gemini": safe(results[2], "gemini"),
+            "pymupdf4llm": safe(results[3], "pymupdf4llm"),
+            "mineru_qwen": safe(results[4], "mineru_qwen"),
         },
     }
