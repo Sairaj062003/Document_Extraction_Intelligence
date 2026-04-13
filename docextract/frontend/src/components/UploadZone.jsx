@@ -70,6 +70,7 @@ export default function UploadZone({ onResults, onLoading }) {
       });
       onResults(res.data);
     } catch (err) {
+      console.error("API Call Failed to:", API_URL, err);
       const msg = err.response?.data?.detail || err.message || 'Extraction failed';
       setError(msg);
       onResults(null);
