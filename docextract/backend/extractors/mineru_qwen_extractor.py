@@ -110,7 +110,12 @@ def _mineru_extract(file_path: str, output_dir: str) -> tuple[str, list[str], in
 
 
 def _run_mineru_pipeline(pdf_bytes: bytes, pdf_path: str, output_dir: str) -> tuple[str, list[str]]:
-    """Execute the MinerU pipeline and return (markdown, image_paths)."""
+    """Execute the MinerU pipeline and return (markdown, image_paths).
+
+    IMPORTANT: magic-pdf's doc_analyze() calls exit(1) on failure, which raises
+    SystemExit (a BaseException, NOT Exception). We must catch BaseException at
+    every level to prevent it from killing the uvicorn server process.
+    """
     try:
         # Try the modern Dataset-based API first (MinerU >= 0.9)
         from magic_pdf.data.dataset import PymuPdfDataset
@@ -134,14 +139,16 @@ def _run_mineru_pipeline(pdf_bytes: bytes, pdf_path: str, output_dir: str) -> tu
         pipe.pipe_parse()
 
         md_content = pipe.pipe_mk_markdown(images_dir, drop_mode="none")
-
-        # Collect image paths
         image_paths = _collect_images(images_dir)
-
         return md_content, image_paths
 
-    except ImportError:
-        pass
+    except (ImportError, BaseException) as e:
+        # Catch BaseException to intercept SystemExit from doc_analyze
+        if isinstance(e, ImportError):
+            pass  # Try next pipeline
+        else:
+            # Log but don't propagate SystemExit — fall through to next attempt
+            pass
 
     try:
         # Fallback: try OCRPipe directly
@@ -159,27 +166,21 @@ def _run_mineru_pipeline(pdf_bytes: bytes, pdf_path: str, output_dir: str) -> tu
 
         md_content = pipe.pipe_mk_markdown(images_dir, drop_mode="none")
         image_paths = _collect_images(images_dir)
-
         return md_content, image_paths
 
-    except ImportError:
+    except (ImportError, BaseException):
+        # Catch BaseException here too — OCRPipe also calls doc_analyze
         pass
 
-    # Last resort: use pymupdf4llm as fallback
-    try:
-        import pymupdf4llm
-        md_text = pymupdf4llm.to_markdown(
-            pdf_path,
-            write_images=False,
-            force_text=False,
-            dpi=300,
-        )
-        return md_text, []
-    except ImportError:
-        raise ImportError(
-            "MinerU (magic-pdf) could not be loaded. "
-            "Install with: pip install magic-pdf[full]"
-        )
+    # Last resort: use pymupdf4llm as fallback (this never calls exit())
+    import pymupdf4llm
+    md_text = pymupdf4llm.to_markdown(
+        pdf_path,
+        write_images=False,
+        force_text=False,
+        dpi=300,
+    )
+    return md_text, []
 
 
 def _collect_images(images_dir: str) -> list[str]:
@@ -324,22 +325,7 @@ def _extract_sync(file_path: str) -> dict:
 
         try:
             # ── Step 1: MinerU structural extraction ──────────────
-            try:
-                md_text, image_paths, page_count = _mineru_extract(file_path, output_dir)
-            except (Exception, SystemExit) as e:
-                # MinerU often fails/exits if model weights are missing
-                # Fallback: use pymupdf4llm for structural part if available
-                try:
-                    import pymupdf4llm
-                    md_text = pymupdf4llm.to_markdown(file_path, write_images=False)
-                    image_paths = []
-                    # Get page count via fitz
-                    import fitz
-                    doc = fitz.open(file_path)
-                    page_count = len(doc)
-                    doc.close()
-                except Exception:
-                    raise e # Re-raise if even fallback fails
+            md_text, image_paths, page_count = _mineru_extract(file_path, output_dir)
 
             # ── Step 2: Detect complex sections ───────────────────
             complex_images = _detect_complex_images(image_paths)
@@ -389,14 +375,15 @@ def _extract_sync(file_path: str) -> dict:
             except Exception:
                 pass
 
-    except Exception as e:
+    except BaseException as e:
+        # Catch BaseException to handle SystemExit from magic-pdf
         return {
             "model": "mineru_qwen",
             "text": None,
             "pages": 0,
             "processing_time_ms": int((time.monotonic() - start) * 1000),
             "note": "MinerU layout analysis + Qwen2.5-VL chart/table refinement",
-            "error": str(e),
+            "error": f"MinerU error (caught): {type(e).__name__}: {e}",
         }
 
 
