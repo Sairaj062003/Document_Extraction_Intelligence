@@ -324,7 +324,22 @@ def _extract_sync(file_path: str) -> dict:
 
         try:
             # ── Step 1: MinerU structural extraction ──────────────
-            md_text, image_paths, page_count = _mineru_extract(file_path, output_dir)
+            try:
+                md_text, image_paths, page_count = _mineru_extract(file_path, output_dir)
+            except (Exception, SystemExit) as e:
+                # MinerU often fails/exits if model weights are missing
+                # Fallback: use pymupdf4llm for structural part if available
+                try:
+                    import pymupdf4llm
+                    md_text = pymupdf4llm.to_markdown(file_path, write_images=False)
+                    image_paths = []
+                    # Get page count via fitz
+                    import fitz
+                    doc = fitz.open(file_path)
+                    page_count = len(doc)
+                    doc.close()
+                except Exception:
+                    raise e # Re-raise if even fallback fails
 
             # ── Step 2: Detect complex sections ───────────────────
             complex_images = _detect_complex_images(image_paths)
