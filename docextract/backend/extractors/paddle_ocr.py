@@ -6,6 +6,7 @@ import time
 import asyncio
 from pathlib import Path
 from utils.file_handler import is_text_file, extract_text_from_file
+from utils.locks import ocr_lock
 
 _ocr = None
 _paddle_error = None
@@ -82,7 +83,8 @@ async def extract(file_path: str) -> dict:
 
         all_text = []
         for img in images:
-            page_text = await asyncio.to_thread(_ocr_on_image, img)
+            async with ocr_lock:
+                page_text = await asyncio.to_thread(_ocr_on_image, img)
             all_text.append(page_text)
 
         full_text = "\n\n--- Page Break ---\n\n".join(all_text)

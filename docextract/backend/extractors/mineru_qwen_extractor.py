@@ -31,6 +31,7 @@ import uuid
 from pathlib import Path
 
 from utils.file_handler import is_text_file, extract_text_from_file
+from utils.locks import ocr_lock
 
 
 # ── Ollama connectivity check ─────────────────────────────────────────
@@ -389,4 +390,5 @@ def _extract_sync(file_path: str) -> dict:
 
 async def extract(file_path: str) -> dict:
     """Async entry point — matches the interface of all other extractors."""
-    return await asyncio.to_thread(_extract_sync, file_path)
+    async with ocr_lock:
+        return await asyncio.to_thread(_extract_sync, file_path)
