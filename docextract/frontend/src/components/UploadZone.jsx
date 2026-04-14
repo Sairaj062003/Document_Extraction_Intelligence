@@ -6,14 +6,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/extract';
 const ALLOWED = ['.pdf', '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.docx', '.txt'];
 
 const FILE_ICONS = {
-  '.pdf':  '📄',
-  '.png':  '🖼️',
-  '.jpg':  '🖼️',
+  '.pdf': '📄',
+  '.png': '🖼️',
+  '.jpg': '🖼️',
   '.jpeg': '🖼️',
   '.tiff': '🖼️',
-  '.tif':  '🖼️',
+  '.tif': '🖼️',
   '.docx': '📝',
-  '.txt':  '📃',
+  '.txt': '📃',
 };
 
 function getExt(name) {

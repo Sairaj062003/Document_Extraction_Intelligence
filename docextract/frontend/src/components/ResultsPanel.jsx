@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const MODEL_META = {
   paddleocr: {
@@ -30,6 +31,12 @@ const MODEL_META = {
     sub: 'Local · Offline · AI-refined',
     icon: '🧠',
     iconClass: 'mineru',
+  },
+  azure_di: {
+    label: 'Azure Document Intelligence',
+    sub: 'Microsoft · prebuilt-layout',
+    icon: '☁️',
+    iconClass: 'azure',
   },
 };
 
@@ -87,10 +94,25 @@ function ResultCard({ modelKey, data }) {
   const hasError = !!data?.error;
   const status = hasText ? 'success' : hasError ? 'error' : 'error';
 
+  // Dynamic subtitle: gemini uses model_used, azure_di uses note, others use static sub
   const modelUsed = data?.model_used;
-  const subLabel = modelKey === 'gemini' && modelUsed
-    ? modelUsed
-    : meta.sub;
+  let subLabel = meta.sub;
+  if (modelKey === 'gemini' && modelUsed) {
+    subLabel = modelUsed;
+  } else if (modelKey === 'azure_di' && data?.note) {
+    // note format: "Azure DI · prebuilt-layout"
+    // show only the model part after the bullet
+    const noteParts = data.note.split('·');
+    subLabel = noteParts.length > 1 ? noteParts.slice(1).join('·').trim() : data.note;
+  }
+
+  // Azure-specific: detect auto handwriting fallback
+  const isHandwritingMode =
+    modelKey === 'azure_di' &&
+    data?.note?.includes('handwriting/scanned detected');
+
+  // Azure DI renders markdown (tables); others use plain <pre>
+  const useMarkdown = modelKey === 'azure_di';
 
   return (
     <div className="result-card">
@@ -139,12 +161,24 @@ function ResultCard({ modelKey, data }) {
         </div>
       )}
 
+      {/* Azure handwriting auto-activation badge */}
+      {isHandwritingMode && (
+        <div className="handwriting-badge">
+          ✍️ Handwriting mode auto-activated
+        </div>
+      )}
+
       {/* Body */}
       <div className="card-body">
         {hasError && (
           <div className="error-msg">⚠️ {data.error}</div>
         )}
-        {hasText && (
+        {hasText && useMarkdown && (
+          <div className="extracted-text markdown-output">
+            <ReactMarkdown>{data.text}</ReactMarkdown>
+          </div>
+        )}
+        {hasText && !useMarkdown && (
           <pre className="extracted-text">{data.text}</pre>
         )}
         {!hasText && !hasError && (
@@ -161,7 +195,7 @@ function ResultCard({ modelKey, data }) {
 export default function ResultsPanel({ results, loading }) {
   if (!results && !loading) return null;
 
-  const modelKeys = ['paddleocr', 'llamaparse', 'gemini', 'pymupdf4llm', 'mineru_qwen'];
+  const modelKeys = ['paddleocr', 'llamaparse', 'gemini', 'pymupdf4llm', 'mineru_qwen', 'azure_di'];
 
   return (
     <div className="results-section fade-in">
