@@ -29,15 +29,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# Copy backend code (this includes magic-pdf.json and requirements.txt)
 COPY . .
 
-# Copy MinerU config to both app directory and root
-COPY magic-pdf.json /app/magic-pdf.json
-COPY magic-pdf.json /root/magic-pdf.json
-
-# Create tmp directory for uploads
-RUN mkdir -p tmp
+# Create tmp directory and link config to root in one layer to reduce overhead
+RUN mkdir -p tmp && cp magic-pdf.json /root/magic-pdf.json
 
 # Expose port
 EXPOSE 8000
