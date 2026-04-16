@@ -6,8 +6,9 @@
     "models-dir": "/root/.cache/magic-pdf/models",
     "layoutreader-model-dir": "/root/.cache/magic-pdf/models/layoutreader",
     "device-mode": "cpu",
+    "use_inside_model": true,
     "layout-config": {
-        "model": "layoutlmv3"
+        "model": "doclayout_yolo"
     },
     "formula-config": {
         "mfd_model": "yolo_v8_mfd",
