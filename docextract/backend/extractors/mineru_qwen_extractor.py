@@ -173,15 +173,9 @@ def _run_mineru_pipeline(pdf_bytes: bytes, pdf_path: str, output_dir: str) -> tu
         # Catch BaseException here too — OCRPipe also calls doc_analyze
         pass
 
-    # Last resort: use pymupdf4llm as fallback (this never calls exit())
-    import pymupdf4llm
-    md_text = pymupdf4llm.to_markdown(
-        pdf_path,
-        write_images=False,
-        force_text=False,
-        dpi=300,
-    )
-    return md_text, []
+    # REMOVED: Hidden fallback to pymupdf4llm. 
+    # We now return None so the user knows if MinerU actually failed.
+    return None, []
 
 
 def _collect_images(images_dir: str) -> list[str]:
