@@ -1,0 +1,12 @@
+{
+    "device-mode": "cpu",
+    "model-dir": "/root/.magic-pdf/models",
+    "use_inside_model": true,
+    "layout-config": {
+        "model": "doclayout_yolo"
+    },
+    "formula-config": {
+        "mfr_model": "unimernet_small",
+        "mte_model": "latex_ocr_v2"
+    }
+}

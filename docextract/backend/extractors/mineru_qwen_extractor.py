@@ -43,6 +43,11 @@ def _check_ollama() -> tuple[bool, str]:
     """
     try:
         import ollama
+        # Explicitly check for OLLAMA_HOST to ensure we're not defaulting to localhost
+        host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
+        print(f"[Extractor] Checking Ollama at: {host}")
+        
+        # Note: The ollama-python library respects OLLAMA_HOST env var automatically.
         models = ollama.list()
         # models is a dict with "models" key containing list of model dicts
         model_names = []
@@ -366,30 +371,28 @@ def _extract_sync(file_path: str) -> dict:
             
             # CASE B: MinerU failed -> Attempt Standalone Qwen-VL Full Page Extraction
             elif ollama_ok:
+                print(f"[Extractor] MinerU failed. Attempting Standalone Qwen-VL fallback for {file_path}")
                 # Get snapshots of the PDF pages
                 page_images = _pdf_to_images(file_path, output_dir)
                 if page_images:
                     results = []
                     for img_path in page_images:
                         try:
-                            # Use a more descriptive prompt for full page extraction
-                            prompt = (
-                                "Role: Expert Document Extractor.\n"
-                                "Task: Extract ALL text and tables from this image. "
-                                "Preserve the layout and use Markdown format. "
-                                "If there is a table, output it in markdown table syntax."
-                            )
-                            # Temporarily override the internal call's prompt logic by passing a custom function if needed 
-                            # or just use _qwen_refine_image with the default prompt which is already good.
                             extracted = _qwen_refine_image(img_path)
                             if extracted and extracted.strip():
                                 results.append(f"--- Page {len(results)+1} ---\n\n{extracted}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            print(f"[Extractor] Qwen-VL failed on page: {e}")
                     
                     if results:
                         md_text = "\n\n".join(results)
                         note = "Standalone Qwen2.5-VL Extraction"
+                    else:
+                        print("[Extractor] Qwen-VL returned no content for any page.")
+                else:
+                    print("[Extractor] Failed to render PDF pages as images for Qwen-VL.")
+            else:
+                print(f"[Extractor] Both MinerU and Qwen-VL/Ollama unavailable. Status: {ollama_msg}")
 
             return {
                 "model": "mineru_qwen",
