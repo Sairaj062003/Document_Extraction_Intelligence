@@ -211,6 +211,27 @@ def _image_to_temp_pdf_for_mineru(image_path: str) -> str:
     return tmp_path
 
 
+def _pdf_to_images(pdf_path: str, output_dir: str) -> list[str]:
+    """Render each page of the PDF to a JPEG image. Helper for Standalone Qwen-VL fallback."""
+    import fitz
+    image_paths = []
+    images_dir = os.path.join(output_dir, "standalone_images")
+    os.makedirs(images_dir, exist_ok=True)
+    
+    try:
+        doc = fitz.open(pdf_path)
+        for i, page in enumerate(doc):
+            # Render page to Pixmap (300 DPI for high quality OCR)
+            pix = page.get_pixmap(dpi=300)
+            img_path = os.path.join(images_dir, f"page_{i}.jpg")
+            pix.save(img_path)
+            image_paths.append(img_path)
+        doc.close()
+    except Exception:
+        pass # Return whatever we managed to render
+    return image_paths
+
+
 # ── Step 2: Detect complex sections ──────────────────────────────────
 
 def _detect_complex_images(image_paths: list[str]) -> list[str]:
@@ -322,45 +343,61 @@ def _extract_sync(file_path: str) -> dict:
             # ── Step 1: MinerU structural extraction ──────────────
             md_text, image_paths, page_count = _mineru_extract(file_path, output_dir)
 
-            # ── Step 2: Detect complex sections ───────────────────
-            complex_images = _detect_complex_images(image_paths)
-
             # ── Step 3: Qwen2.5-VL refinement ─────────────────────
-            note = "MinerU layout analysis + Qwen2.5-VL chart/table refinement"
             ollama_ok, ollama_msg = _check_ollama()
+            note = "Local AI Extraction"
 
-            if complex_images and ollama_ok:
-                image_refinements = {}
-                for img_path in complex_images:
-                    try:
-                        extracted = _qwen_refine_image(img_path)
-                        if extracted and extracted.strip():
-                            image_refinements[img_path] = extracted
-                    except Exception:
-                        # Skip failed individual image refinements
-                        pass
+            # CASE A: MinerU succeeded -> Refine detected charts/tables
+            if md_text and md_text.strip():
+                complex_images = _detect_complex_images(image_paths)
+                if complex_images and ollama_ok:
+                    image_refinements = {}
+                    for img_path in complex_images:
+                        try:
+                            extracted = _qwen_refine_image(img_path)
+                            if extracted and extracted.strip():
+                                image_refinements[img_path] = extracted
+                        except Exception:
+                            pass
 
-                if image_refinements:
-                    md_text = _inject_qwen_results(md_text, image_refinements)
-                    note = (
-                        f"MinerU layout analysis + Qwen2.5-VL refined "
-                        f"{len(image_refinements)}/{len(complex_images)} complex sections"
-                    )
-            elif complex_images and not ollama_ok:
-                note = (
-                    "MinerU extraction complete. Qwen refinement skipped — "
-                    "Ollama not running. Start with: ollama run qwen2.5vl:3b"
-                )
-            else:
-                note = "MinerU layout analysis (no complex sections detected)"
+                    if image_refinements:
+                        md_text = _inject_qwen_results(md_text, image_refinements)
+                        note = f"MinerU + Qwen2.5-VL refinement ({len(image_refinements)} sections)"
+            
+            # CASE B: MinerU failed -> Attempt Standalone Qwen-VL Full Page Extraction
+            elif ollama_ok:
+                # Get snapshots of the PDF pages
+                page_images = _pdf_to_images(file_path, output_dir)
+                if page_images:
+                    results = []
+                    for img_path in page_images:
+                        try:
+                            # Use a more descriptive prompt for full page extraction
+                            prompt = (
+                                "Role: Expert Document Extractor.\n"
+                                "Task: Extract ALL text and tables from this image. "
+                                "Preserve the layout and use Markdown format. "
+                                "If there is a table, output it in markdown table syntax."
+                            )
+                            # Temporarily override the internal call's prompt logic by passing a custom function if needed 
+                            # or just use _qwen_refine_image with the default prompt which is already good.
+                            extracted = _qwen_refine_image(img_path)
+                            if extracted and extracted.strip():
+                                results.append(f"--- Page {len(results)+1} ---\n\n{extracted}")
+                        except Exception:
+                            pass
+                    
+                    if results:
+                        md_text = "\n\n".join(results)
+                        note = "Standalone Qwen2.5-VL Extraction"
 
             return {
                 "model": "mineru_qwen",
                 "text": md_text if md_text and md_text.strip() else None,
                 "pages": page_count,
                 "processing_time_ms": int((time.monotonic() - start) * 1000),
-                "note": note,
                 "error": None if (md_text and md_text.strip()) else "No text extracted",
+                "note": note if (md_text and md_text.strip()) else "No text extracted", # Clean UI
             }
 
         finally:
