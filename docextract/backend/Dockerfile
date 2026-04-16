@@ -6,7 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK True
 ENV FLAGS_use_mkldnn 0
-ENV OLLAMA_HOST http://host.docker.internal:11434
+ENV MAGIC_PDF_CONFIG /app/magic-pdf.json
+ENV OLLAMA_HOST http://172.17.0.1:11434
 
 # Set working directory
 WORKDIR /app
@@ -31,7 +32,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY . .
 
-# Copy MinerU config to home directory
+# Copy MinerU config to both app directory and root
+COPY magic-pdf.json /app/magic-pdf.json
 COPY magic-pdf.json /root/magic-pdf.json
 
 # Create tmp directory for uploads

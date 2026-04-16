@@ -38,38 +38,53 @@ from utils.locks import ocr_lock
 
 def _check_ollama() -> tuple[bool, str]:
     """Check if Ollama is running and qwen2.5vl:3b is available.
+    Tries multiple hostnames for Docker-to-Host connectivity.
 
     Returns (available: bool, message: str).
     """
-    try:
-        import ollama
-        # Explicitly check for OLLAMA_HOST to ensure we're not defaulting to localhost
-        host = os.environ.get("OLLAMA_HOST", "http://host.docker.internal:11434")
-        print(f"[Extractor] Checking Ollama at: {host}")
-        
-        # Note: The ollama-python library respects OLLAMA_HOST env var automatically.
-        models = ollama.list()
-        # models is a dict with "models" key containing list of model dicts
-        model_names = []
-        if hasattr(models, "models"):
-            model_names = [m.model for m in models.models]
-        elif isinstance(models, dict) and "models" in models:
-            model_names = [m.get("model", m.get("name", "")) for m in models["models"]]
+    import os
+    import ollama
 
-        # Match qwen2.5vl:3b (could appear as qwen2.5vl:3b or similar)
-        for name in model_names:
-            if "qwen2.5vl" in name.lower() or "qwen2.5-vl" in name.lower():
-                return True, f"Model found: {name}"
+    # List of hosts to try
+    potential_hosts = [
+        os.environ.get("OLLAMA_HOST"),
+        "http://172.17.0.1:11434",
+        "http://host.docker.internal:11434",
+    ]
+    # Remove duplicates and None
+    potential_hosts = list(dict.fromkeys([h for h in potential_hosts if h]))
 
-        return False, (
-            "Ollama is running but qwen2.5vl:3b is not installed. "
-            "Pull it with: ollama pull qwen2.5vl:3b"
-        )
-    except Exception as e:
-        return False, (
-            f"Ollama not reachable: {e}. "
-            "Download from https://ollama.com/download then run: ollama pull qwen2.5vl:3b"
-        )
+    last_error = ""
+    for host in potential_hosts:
+        try:
+            print(f"[Extractor] Checking Ollama at: {host}")
+            # The ollama-python library respects OLLAMA_HOST env var, 
+            # but we can explicitly test by temporarily setting it or using a client
+            os.environ["OLLAMA_HOST"] = host
+            models = ollama.list()
+            
+            # If we reach here, connectivity is OK
+            model_names = []
+            if hasattr(models, "models"):
+                model_names = [m.model for m in models.models]
+            elif isinstance(models, dict) and "models" in models:
+                model_names = [m.get("model", m.get("name", "")) for m in models["models"]]
+
+            for name in model_names:
+                if "qwen2.5vl" in name.lower() or "qwen2.5-vl" in name.lower():
+                    print(f"[Extractor] Success! Connected to {host} and found Qwen-VL.")
+                    return True, f"Model found: {name} at {host}"
+            
+            return False, f"Ollama reached at {host} but qwen2.5vl:3b not installed. Run: ollama pull qwen2.5vl:3b"
+            
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    return False, (
+        f"Ollama not reachable at any of {potential_hosts}. Last error: {last_error}. "
+        "Ensure Ollama is running on host with OLLAMA_HOST=0.0.0.0"
+    )
 
 
 # ── Step 1: MinerU structural extraction ──────────────────────────────
