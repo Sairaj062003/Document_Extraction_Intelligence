@@ -1,0 +1,16 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+tmp/
+output/
+scripts/
+data/
+.env
+.ipynb_checkpoints
+node_modules
+dist
+build
